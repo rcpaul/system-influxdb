@@ -5,7 +5,7 @@ import yaml
 import math
 import time
 
-from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client import InfluxDBClient, Point, WritePrecision, WriteOptions
 
 class MeasurementSensor():
     """Superclass for all sensors"""
@@ -177,7 +177,10 @@ class Controller():
     def tick(self):
         while True:
             for sensor in self.sensors:
-                sensor.tick()
+                try:
+                    sensor.tick()
+                except:
+                    print("Ignoring error for sensor {}".format(sensor))
 
             # Schedule update at next wall clock second
             delay = round((1000000 - datetime.now().microsecond) / 1000)
@@ -188,7 +191,7 @@ with open('config.yml') as file:
     globalConfig = yaml.load(file, Loader=yaml.FullLoader)
 
 influxClient = InfluxDBClient(url=globalConfig['url'], token=globalConfig['token'])
-influxWriteApi = influxClient.write_api()
+influxWriteApi = influxClient.write_api(write_options=WriteOptions(flush_interval=20_000))
 
 controller=Controller(globalConfig)
 controller.tick()
